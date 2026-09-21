@@ -1,0 +1,228 @@
+// Source de vérité de la boutique : catalogue, stock, commandes, paiements, remboursements.
+// Stripe ne sert que de rail de paiement : aucun produit/prix n'y est créé.
+//
+// Montants : entiers en unité mineure (centimes), jamais de flottants.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PAYMENT_FAILED
+  EXPIRED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String?
+  priceCents  Int
+  currency    String   @default("cad")
+  // Unités disponibles à la vente (les unités réservées par un checkout en cours sont déjà déduites).
+  stock       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  // Compte du client connecté au moment du checkout (null = paiement en invité).
+  userId           String?
+  user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status           OrderStatus @default(PENDING_PAYMENT)
+  currency         String
+  subtotalCents    Int
+  shippingCents    Int         @default(0)
+  // Connue seulement après paiement (calculée par Stripe Tax si activée).
+  taxCents         Int         @default(0)
+  // Avant paiement : sous-total + livraison. Après paiement : montant réellement encaissé.
+  totalCents       Int
+  // Identifiant de panier généré côté client : évite deux sessions Stripe pour le même panier.
+  cartId           String
+  // Empreinte (produits + quantités) pour savoir si le panier a changé depuis la session ouverte.
+  itemsFingerprint String
+  // Fin de la réservation de stock (alignée sur l'expiration de la session Checkout).
+  expiresAt        DateTime
+  // Un paiement a été reçu mais la commande ne peut pas être honorée automatiquement.
+  needsReview      Boolean     @default(false)
+  // OUT_OF_STOCK (remboursement automatique) ou AMOUNT_MISMATCH (vérification manuelle).
+  reviewReason     String?
+  // Renseignés à partir de la session Stripe une fois le paiement confirmé.
+  customerEmail    String?
+  shippingName     String?
+  shippingAddress  Json?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  items    OrderItem[]
+  payments Payment[]
+  refunds  Refund[]
+
+  @@index([cartId, status])
+  @@index([status, expiresAt])
+  @@index([userId, createdAt])
+  @@index([needsReview])
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  // Instantané au moment de l'achat : ne jamais recalculer depuis le prix courant du produit.
+  productName    String
+  unitPriceCents Int
+  quantity       Int
+  totalCents     Int
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                      String        @id @default(cuid())
+  orderId                 String
+  order                   Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider                String        @default("stripe")
+  stripeCheckoutSessionId String?       @unique
+  stripePaymentIntentId   String?       @unique
+  amountCents             Int
+  currency                String
+  status                  PaymentStatus @default(PENDING)
+  refundedCents           Int           @default(0)
+  paidAt                  DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  refunds Refund[]
+
+  @@index([orderId])
+}
+
+model Refund {
+  id             String       @id @default(cuid())
+  orderId        String
+  order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentId      String
+  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  stripeRefundId String       @unique
+  amountCents    Int
+  currency       String
+  status         RefundStatus
+  reason         String?
+  // Horodatage de l'événement Stripe appliqué en dernier : ignore les événements arrivés dans le désordre.
+  lastEventAt    DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([paymentId])
+}
+
+// Idempotence des webhooks : la contrainte d'unicité sur stripeEventId est ce qui
+// protège contre les livraisons en double, y compris concurrentes.
+model StripeEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  type          String
+  createdAt     DateTime @default(now())
+}
+
+// Limitation de débit (fenêtre fixe) : la clé contient un hash de l'IP, jamais l'IP elle-même.
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+}
+
+// --- Authentification (Better Auth : connexion Google / GitHub) -------------------------------
+
+model User {
+  id            String   @id
+  name          String
+  email         String
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  orders   Order[]
+
+  @@unique([email])
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@index([identifier])
+}

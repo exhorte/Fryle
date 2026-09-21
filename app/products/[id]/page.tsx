@@ -1,16 +1,13 @@
+import { notFound } from "next/navigation";
 import { ProductDetail } from "@/components/product-detail";
-import { stripe } from "@/lib/stripe";
+import { getActiveProduct } from "@/services/product-service";
 
-export default async function ProductPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export const dynamic = "force-dynamic";
+
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const product = await stripe.products.retrieve(id, {
-    expand: ["default_price"],
-  });
+  const product = await getActiveProduct(id);
+  if (!product) notFound();
 
-  const plainProduct = JSON.parse(JSON.stringify(product));
-  return <ProductDetail product={plainProduct} />;
+  return <ProductDetail product={product} />;
 }

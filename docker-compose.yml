@@ -1,0 +1,17 @@
+# PostgreSQL local pour le développement et les tests. La production utilise un
+# PostgreSQL hébergé (Supabase, Neon…) : seule DATABASE_URL change.
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ecommerce
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

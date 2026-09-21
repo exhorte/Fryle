@@ -1,45 +1,37 @@
 import Link from "next/link";
-import Stripe from "stripe";
+import type { ProductView } from "@/services/product-service";
+import { formatMoney } from "@/lib/money";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import Image from "next/image";
-import { Button } from "./ui/button";
+import { buttonVariants } from "./ui/button";
+import { ProductImage } from "./product-image";
 
 interface Props {
-  product: Stripe.Product;
+  product: ProductView;
 }
 
 export const ProductCard = ({ product }: Props) => {
-  const price = product.default_price as Stripe.Price;
-
   return (
     <Link href={`/products/${product.id}`} className="block h-full">
-      <Card className="group hover:shadow-2xl transition duration-300 py-0 h-full flex flex-col border-gray-300 gap-0">
-        {product.images && product.images[0] && (
-          <div className="relative h-60 w-full">
-            <Image
-              src={product.images[0]}
-              alt={product.name}
-              layout="fill"
-              objectFit="cover"
-              className="group-hover:opacity-90 transition-opacity duration-300 rounded-t-lg"
-            />
-          </div>
-        )}
+      <Card className="group flex h-full flex-col gap-0 border-gray-300 py-0 transition duration-300 hover:shadow-2xl">
+        <div className="relative h-60 w-full overflow-hidden rounded-t-xl">
+          <ProductImage
+            src={product.imageUrl}
+            alt={product.name}
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="transition-opacity duration-300 group-hover:opacity-90"
+          />
+        </div>
         <CardHeader className="p-4">
-          <CardTitle className="text-xl font-bold text-gray-800">
-            {product.name}
-          </CardTitle>
+          <CardTitle className="text-xl font-bold text-gray-800">{product.name}</CardTitle>
         </CardHeader>
-        <CardContent className="p-4 flex-grow flex flex-col justify-between">
-          {product.description && (
-            <p className="text-gray-600 text-sm mb-2">{product.description}</p>
-          )}
-          {price && price.unit_amount && (
-            <p className="text-lg font-semibold text-gray-900">
-              ${(price.unit_amount / 100).toFixed(2)}
-            </p>
-          )}
-          <Button className="mt-4 bg-black text-white">View Details</Button>
+        <CardContent className="flex flex-grow flex-col justify-between p-4">
+          {product.description && <p className="mb-2 text-sm text-gray-600">{product.description}</p>}
+          <p className="text-lg font-semibold text-gray-900">
+            {formatMoney(product.priceCents, product.currency)}
+            {product.stock === 0 && <span className="ml-2 text-sm font-normal text-red-600">Out of stock</span>}
+          </p>
+          {/* Visuel seulement : la carte entière est le lien (un bouton dans un lien est du HTML invalide). */}
+          <span className={buttonVariants({ className: "mt-4 bg-black text-white" })}>View Details</span>
         </CardContent>
       </Card>
     </Link>
