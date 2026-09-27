@@ -34,7 +34,7 @@ export async function checkoutAction(_previous: CheckoutState, formData: FormDat
     );
     if (!limit.allowed) {
       const minutes = Math.ceil(limit.retryAfterSeconds / 60);
-      return { error: `Too many attempts. Please try again in ${minutes} minute${minutes > 1 ? "s" : ""}.` };
+      return { error: `Trop de tentatives. Réessayez dans ${minutes} minute${minutes > 1 ? "s" : ""}.` };
     }
 
     const user = await getCurrentUser();
@@ -45,7 +45,7 @@ export async function checkoutAction(_previous: CheckoutState, formData: FormDat
   } catch (error) {
     if (error instanceof CheckoutError) return { error: error.message };
     log("error", "checkout_action_failed", { error: error instanceof Error ? error.message : String(error) });
-    return { error: "Unable to start payment. Please try again." };
+    return { error: "Impossible de lancer le paiement. Veuillez réessayer." };
   }
   // redirect() lève une exception de contrôle : à appeler hors du try/catch.
   redirect(url);

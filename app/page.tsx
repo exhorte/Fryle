@@ -1,45 +1,67 @@
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Carousel } from "@/components/carousel";
-import { listActiveProducts } from "@/services/product-service";
+import { CategoryGrid } from "@/components/home/category-grid";
+import { Hero } from "@/components/home/hero";
+import { NewsletterSection } from "@/components/home/newsletter-section";
+import { PromoBanners } from "@/components/home/promo-banners";
+import { ProductCard, ProductGrid } from "@/components/product/product-card";
+import { ProductRail, RailItem } from "@/components/product/product-rail";
+import { SectionHeading } from "@/components/site/section-heading";
+import { TrustStrip } from "@/components/site/trust-list";
+import {
+  countProductsByCategory,
+  listDeals,
+  listFeaturedProducts,
+} from "@/services/product-service";
 
-// Le stock change à chaque commande : pas de rendu statique.
+// Le stock et les prix changent à chaque commande : pas de rendu statique.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const products = await listActiveProducts(5);
-  const hero = products.find((product) => product.imageUrl);
+  const [featured, deals, counts] = await Promise.all([
+    listFeaturedProducts(10),
+    listDeals(4),
+    countProductsByCategory(),
+  ]);
+  const heroProduct = featured.find((product) => product.category === "SMARTPHONE") ?? null;
 
   return (
-    <div>
-      <section className="rounded bg-neutral-100 py-8 sm:py-12">
-        <div className="mx-auto grid grid-cols-1 items-center justify-items-center gap-8 px-8 sm:px-16 md:grid-cols-2">
-          <div className="max-w-md space-y-4">
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Welcome to My Ecommerce</h2>
-            <p className="text-neutral-600">Discover the latest products at the best prices.</p>
-            <Button
-              asChild
-              variant="default"
-              className="inline-flex items-center justify-center rounded-full bg-black px-6 py-3 text-white"
-            >
-              <Link href="/products" className="inline-flex items-center justify-center rounded-full px-6 py-3">
-                Browse All Products
-              </Link>
-            </Button>
-          </div>
-          {hero?.imageUrl && (
-            <Image alt={hero.name} src={hero.imageUrl} className="rounded" width={450} height={450} />
-          )}
-        </div>
+    <div className="space-y-20 lg:space-y-28">
+      <div className="space-y-12">
+        <Hero product={heroProduct} />
+        <TrustStrip className="px-2" />
+      </div>
+
+      <section>
+        <SectionHeading title="Explorer par catégorie" href="/products" linkLabel="Toute la boutique" />
+        <CategoryGrid counts={counts} />
       </section>
-      <section className="py-8">
-        {products.length > 0 ? (
-          <Carousel products={products} />
-        ) : (
-          <p className="text-center text-neutral-600">No products available yet. Please check back soon.</p>
-        )}
-      </section>
+
+      {featured.length > 0 && (
+        <section>
+          <SectionHeading
+            title="Nos incontournables"
+            description="Les appareils que nos clients choisissent le plus souvent."
+            href="/products"
+          />
+          <ProductRail label="Nos incontournables">
+            {featured.map((product) => (
+              <RailItem key={product.id}>
+                <ProductCard product={product} />
+              </RailItem>
+            ))}
+          </ProductRail>
+        </section>
+      )}
+
+      <PromoBanners />
+
+      {deals.length > 0 && (
+        <section>
+          <SectionHeading title="Bons plans" description="Des prix réduits, dans la limite des stocks." href="/products?promo=1" />
+          <ProductGrid products={deals} />
+        </section>
+      )}
+
+      <NewsletterSection />
     </div>
   );
 }

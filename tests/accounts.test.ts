@@ -142,8 +142,8 @@ describe("autorisation : un utilisateur ne voit que ses commandes", () => {
     const orders = await listOrdersForUser(alice.id);
 
     expect(orders.map((o) => o.id)).toEqual([a2.order.id, a1.order.id]);
-    expect(orders[0]).toMatchObject({ total: "$37.00", status: "PENDING_PAYMENT" });
-    expect(orders[0].items).toEqual([{ name: "Mug", quantity: 2, total: "$37.00" }]);
+    expect(orders[0]).toMatchObject({ total: "37,00 $", status: "PENDING_PAYMENT" });
+    expect(orders[0].items).toEqual([{ name: "Mug", quantity: 2, total: "37,00 $" }]);
     expect(await listOrdersForUser("someone-else")).toEqual([]);
   });
 });

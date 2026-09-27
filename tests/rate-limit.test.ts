@@ -85,10 +85,10 @@ describe("checkoutAction : limitation de débit et identité serveur", () => {
 
     for (let i = 0; i < 15; i++) {
       const state = await checkoutAction({}, form);
-      expect(state.error).toMatch(/cart is invalid/i);
+      expect(state.error).toMatch(/panier est invalide/i);
     }
     const blocked = await checkoutAction({}, form);
-    expect(blocked.error).toMatch(/too many attempts/i);
+    expect(blocked.error).toMatch(/trop de tentatives/i);
 
     // Une autre adresse n'est pas affectée.
     vi.doMock("next/headers", () => ({
@@ -96,7 +96,7 @@ describe("checkoutAction : limitation de débit et identité serveur", () => {
     }));
     vi.resetModules();
     const { checkoutAction: otherIp } = await import("@/app/checkout/checkout-action");
-    expect((await otherIp({}, form)).error).toMatch(/cart is invalid/i);
+    expect((await otherIp({}, form)).error).toMatch(/panier est invalide/i);
     vi.doUnmock("next/headers");
     vi.doUnmock("@/lib/auth-session");
   });

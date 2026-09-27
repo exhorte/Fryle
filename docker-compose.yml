@@ -9,7 +9,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ecommerce
     ports:
-      - "5433:5432"
+      # Accessible uniquement depuis cette machine. Port modifiable si 55432 est déjà pris : DB_PORT=… docker compose up -d
+      - "127.0.0.1:${DB_PORT:-55432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 

@@ -227,7 +227,7 @@ describe("checkout : concurrence et doublons", () => {
     stripeMock.checkout.sessions.create.mockRejectedValueOnce(new Error("Stripe is down: sk_test_secret_leak"));
 
     const attempt = createCheckoutSession({ cartId: randomUUID(), items: [{ productId: product.id, quantity: 2 }] });
-    await expect(attempt).rejects.toMatchObject({ code: "PAYMENT_UNAVAILABLE", message: "Unable to start payment. Please try again." });
+    await expect(attempt).rejects.toMatchObject({ code: "PAYMENT_UNAVAILABLE", message: "Impossible de lancer le paiement. Veuillez réessayer." });
 
     expect((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).stock).toBe(5);
     expect((await prisma.order.findFirstOrThrow()).status).toBe("CANCELED");

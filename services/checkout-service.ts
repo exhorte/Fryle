@@ -56,7 +56,7 @@ function normalizeLines(items: Line[]): Line[] {
   for (const item of items) merged.set(item.productId, (merged.get(item.productId) ?? 0) + item.quantity);
   const lines = [...merged].map(([productId, quantity]) => ({ productId, quantity }));
   if (lines.some((l) => l.quantity > MAX_QUANTITY_PER_PRODUCT)) {
-    throw new CheckoutError("INVALID_CART", `You can buy at most ${MAX_QUANTITY_PER_PRODUCT} units of a product.`);
+    throw new CheckoutError("INVALID_CART", `Vous pouvez acheter au maximum ${MAX_QUANTITY_PER_PRODUCT} unités d'un même produit.`);
   }
   return lines.sort((a, b) => a.productId.localeCompare(b.productId));
 }
@@ -105,7 +105,7 @@ async function planOrder(
       const live = open.expiresAt > new Date();
       // Réutilisable seulement pour le même panier, encore valide, et le même utilisateur (ou une commande invité).
       if (open.itemsFingerprint === fp && live && (open.userId === null || open.userId === userId)) {
-        if (!sessionId) throw new CheckoutError("IN_PROGRESS", "Your checkout is already being prepared. Please retry in a moment.");
+        if (!sessionId) throw new CheckoutError("IN_PROGRESS", "Votre paiement est déjà en cours de préparation. Réessayez dans un instant.");
         if (open.userId === null && userId) {
           await tx.order.update({ where: { id: open.id }, data: { userId } });
         }
@@ -121,13 +121,13 @@ async function planOrder(
     for (const line of lines) {
       const product = byId.get(line.productId);
       if (!product || !product.active) {
-        throw new CheckoutError("PRODUCT_UNAVAILABLE", "One of the products in your cart is no longer available.");
+        throw new CheckoutError("PRODUCT_UNAVAILABLE", "Un produit de votre panier n'est plus disponible.");
       }
     }
 
     const currency = byId.get(lines[0].productId)!.currency.toLowerCase();
     if (!isSupportedCurrency(currency) || products.some((p) => p.currency.toLowerCase() !== currency)) {
-      throw new CheckoutError("CURRENCY_MISMATCH", "The products in your cart cannot be paid together.");
+      throw new CheckoutError("CURRENCY_MISMATCH", "Les produits de votre panier ne peuvent pas être payés ensemble.");
     }
 
     // Les prix viennent exclusivement de la base ; le total est calculé côté serveur en entiers.
@@ -139,13 +139,13 @@ async function planOrder(
     const shippingCents = computeShippingCents(subtotalCents, shippingConfig);
     const totalCents = subtotalCents + shippingCents;
     if (!Number.isSafeInteger(totalCents) || subtotalCents <= 0) {
-      throw new CheckoutError("INVALID_CART", "Your cart total is invalid.");
+      throw new CheckoutError("INVALID_CART", "Le total de votre panier est invalide.");
     }
 
     const reservation = await tryReserveStock(tx, lines);
     if (!reservation.ok) {
-      const name = byId.get(reservation.productId)?.name ?? "A product";
-      throw new CheckoutError("OUT_OF_STOCK", `${name} is out of stock or has fewer units available than requested.`);
+      const name = byId.get(reservation.productId)?.name ?? "Un produit";
+      throw new CheckoutError("OUT_OF_STOCK", `${name} : stock insuffisant pour la quantité demandée.`);
     }
 
     const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
@@ -204,7 +204,7 @@ export async function createCheckoutSession(
   context: CheckoutContext = {},
 ): Promise<{ url: string }> {
   const parsed = checkoutInputSchema.safeParse(raw);
-  if (!parsed.success) throw new CheckoutError("INVALID_CART", "Your cart is invalid. Please review it and try again.");
+  if (!parsed.success) throw new CheckoutError("INVALID_CART", "Votre panier est invalide. Vérifiez-le puis réessayez.");
   const { cartId } = parsed.data;
   const lines = normalizeLines(parsed.data.items);
   const baseUrl = getBaseUrl();
@@ -232,6 +232,7 @@ export async function createCheckoutSession(
       session = await stripe.checkout.sessions.create(
         {
           mode: "payment",
+          locale: "fr",
           client_reference_id: plan.orderId,
           metadata: { orderId: plan.orderId },
           payment_intent_data: { metadata: { orderId: plan.orderId } },
@@ -254,7 +255,7 @@ export async function createCheckoutSession(
               {
                 shipping_rate_data: {
                   type: "fixed_amount" as const,
-                  display_name: plan.shippingCents === 0 ? "Free shipping" : "Standard shipping",
+                  display_name: plan.shippingCents === 0 ? "Livraison offerte" : "Livraison standard",
                   fixed_amount: { amount: plan.shippingCents, currency: plan.currency },
                   tax_behavior: automaticTax ? ("exclusive" as const) : undefined,
                 },
@@ -280,7 +281,7 @@ export async function createCheckoutSession(
       });
       // Compensation : sans session, la réservation de stock n'a plus de raison d'être.
       await releaseInOwnTransaction(plan.orderId, "CANCELED");
-      throw new CheckoutError("PAYMENT_UNAVAILABLE", "Unable to start payment. Please try again.");
+      throw new CheckoutError("PAYMENT_UNAVAILABLE", "Impossible de lancer le paiement. Veuillez réessayer.");
     }
 
     await prisma.payment.update({
@@ -302,5 +303,5 @@ export async function createCheckoutSession(
     return { url };
   }
 
-  throw new CheckoutError("PAYMENT_UNAVAILABLE", "Unable to start payment. Please try again.");
+  throw new CheckoutError("PAYMENT_UNAVAILABLE", "Impossible de lancer le paiement. Veuillez réessayer.");
 }

@@ -16,8 +16,8 @@ export function currencyDigits(currency: string): number {
   );
 }
 
-/** Affichage uniquement : ne jamais réutiliser le résultat dans un calcul. */
-export function formatMoney(amountMinor: number, currency: string, locale = "en-CA"): string {
+/** Affichage uniquement (« 1 299,00 $ ») : ne jamais réutiliser le résultat dans un calcul. */
+export function formatMoney(amountMinor: number, currency: string, locale = "fr-CA"): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: currency.toUpperCase(),

@@ -159,7 +159,7 @@ Prérequis : Node 20+, Docker, [Stripe CLI](https://docs.stripe.com/stripe-cli).
 ```bash
 npm install
 cp .env.example .env          # puis renseignez STRIPE_SECRET_KEY (sk_test_…)
-npm run db:up                 # PostgreSQL local (port 5433)
+npm run db:up                 # PostgreSQL local (port 55432, modifiable via DB_PORT)
 npm run db:migrate            # applique les migrations
 npm run db:seed               # 4 produits d'exemple
 npm run dev

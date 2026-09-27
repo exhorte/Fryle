@@ -31,6 +31,15 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum Category {
+  SMARTPHONE
+  LAPTOP
+  WATCH
+  EARBUDS
+  HEADPHONES
+  ACCESSORY
+}
+
 enum RefundStatus {
   PENDING
   SUCCEEDED
@@ -39,19 +48,29 @@ enum RefundStatus {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  imageUrl    String?
-  priceCents  Int
-  currency    String   @default("cad")
+  id                  String   @id @default(cuid())
+  name                String
+  description         String?
+  imageUrl            String?
+  category            Category @default(ACCESSORY)
+  brand               String   @default("Apple")
+  priceCents          Int
+  // Prix de référence barré (affichage d'une réduction) ; jamais utilisé pour encaisser.
+  compareAtPriceCents Int?
+  // Mis en avant sur la page d'accueil.
+  featured            Boolean  @default(false)
+  // Points forts affichés sur la fiche produit.
+  highlights          String[] @default([])
+  currency            String   @default("cad")
   // Unités disponibles à la vente (les unités réservées par un checkout en cours sont déjà déduites).
-  stock       Int      @default(0)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  stock               Int      @default(0)
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   orderItems OrderItem[]
+
+  @@index([active, category])
 }
 
 model Order {
@@ -225,4 +244,11 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@index([identifier])
+}
+
+// Inscriptions à la newsletter (consentement explicite via le formulaire du pied de page).
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
 }

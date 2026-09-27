@@ -62,7 +62,7 @@ describe("livraison", () => {
       {
         shipping_rate_data: expect.objectContaining({
           type: "fixed_amount",
-          display_name: "Standard shipping",
+          display_name: "Livraison standard",
           fixed_amount: { amount: 999, currency: "cad" },
         }),
       },
@@ -77,7 +77,7 @@ describe("livraison", () => {
 
     expect(order.shippingCents).toBe(0);
     expect(order.totalCents).toBe(3998);
-    expect(createParams().shipping_options?.[0].shipping_rate_data?.display_name).toBe("Free shipping");
+    expect(createParams().shipping_options?.[0].shipping_rate_data?.display_name).toBe("Livraison offerte");
   });
 
   it("enregistre le client et l'adresse d'expédition confirmés au paiement", async () => {
