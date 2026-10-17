@@ -1,47 +1,47 @@
 # Fryle
 
-Boutique d'appareils électroniques (iPhone, Mac, Apple Watch, AirPods, casques, accessoires) : [Next.js](https://nextjs.org) (App Router), React 19, Tailwind v4, shadcn/ui,
-PostgreSQL + Prisma, paiements par [Stripe Checkout](https://docs.stripe.com/payments/checkout).
+Electronics store (iPhone, Mac, Apple Watch, AirPods, headphones, accessories): [Next.js](https://nextjs.org) (App Router), React 19, Tailwind v4, shadcn/ui,
+PostgreSQL + Prisma, payments through [Stripe Checkout](https://docs.stripe.com/payments/checkout).
 
-Le catalogue, le stock et les commandes vivent dans la base de données ; Stripe ne gère que le paiement.
-Paiement invité ou avec compte (connexion Google / GitHub optionnelle), livraison et taxes optionnelles.
-Voir **[docs/stripe.md](docs/stripe.md)** pour l'architecture, les webhooks, les tests et la mise en production.
+The catalog, stock and orders live in the database; Stripe only handles the payment.
+Guest checkout or checkout with an account (optional Google / GitHub sign-in), optional shipping and taxes.
+See **[docs/stripe.md](docs/stripe.md)** (in French) for the architecture, webhooks, tests and going to production.
 
-## Démarrage
+## Getting started
 
 ```bash
 npm install
-cp .env.example .env     # renseignez STRIPE_SECRET_KEY (clé secrète sk_test_…)
-npm run db:up            # PostgreSQL local via Docker
+cp .env.example .env     # set STRIPE_SECRET_KEY (secret key sk_test_…)
+npm run db:up            # local PostgreSQL via Docker
 npm run db:migrate
-npm run db:seed          # catalogue de démonstration Fryle (22 produits)
+npm run db:seed          # Fryle demo catalog (22 products)
 npm run dev              # http://localhost:3000
 ```
 
-Pour tester les paiements en local, lancez aussi `npm run stripe:listen` (Stripe CLI) et copiez le secret `whsec_…`
-affiché dans `STRIPE_WEBHOOK_SECRET`.
+To test payments locally, also run `npm run stripe:listen` (Stripe CLI) and copy the `whsec_…` secret it prints
+into `STRIPE_WEBHOOK_SECRET`.
 
-## Design et contenu
+## Design and content
 
-- Interface en français, composants [shadcn/ui](https://ui.shadcn.com) (`components/ui`), icônes [Lucide](https://lucide.dev),
-  polices Inter et Outfit. Thème et couleurs : `app/globals.css`.
-- Identité et engagements affichés (retours, garantie) : `lib/site-config.ts` — **à adapter à vos conditions réelles**.
-  La mention de livraison est calculée à partir de la configuration `SHIPPING_*`.
-- Catégories : `lib/catalog.ts`. Produits : table `Product` (catégorie, marque, prix barré, mise en avant, points forts).
-- Visuels : illustrations SVG originales dans `public/products`. Remplacez-les par vos propres photos en modifiant
-  `imageUrl` (fichier dans `public/` ou URL autorisée dans `next.config.ts`).
-- Le catalogue de démonstration (`prisma/seed.ts`) contient des prix et caractéristiques d'exemple à vérifier.
+- The interface is in French, built with [shadcn/ui](https://ui.shadcn.com) components (`components/ui`), [Lucide](https://lucide.dev) icons,
+  and the Inter and Outfit fonts. Theme and colors: `app/globals.css`.
+- Displayed identity and commitments (returns, warranty): `lib/site-config.ts` — **adapt them to your real terms**.
+  The delivery notice is computed from the `SHIPPING_*` configuration.
+- Categories: `lib/catalog.ts`. Products: `Product` table (category, brand, strike-through price, featured flag, highlights).
+- Visuals: original SVG illustrations in `public/products`. Replace them with your own photos by changing
+  `imageUrl` (a file in `public/` or a URL allowed in `next.config.ts`).
+- The demo catalog (`prisma/seed.ts`) contains sample prices and specifications that should be checked.
 
 ## Scripts
 
-| Commande | Rôle |
+| Command | Purpose |
 |---|---|
-| `npm run dev` / `build` / `start` | Serveur Next.js |
-| `npm test` | Tests d'intégration (nécessite `npm run db:up`) |
+| `npm run dev` / `build` / `start` | Next.js server |
+| `npm test` | Integration tests (requires `npm run db:up`) |
 | `npm run lint` | ESLint |
-| `npm run db:up` / `db:down` | Démarre / arrête PostgreSQL local |
-| `npm run db:migrate` / `db:deploy` | Migrations (dev / production) |
-| `npm run db:seed` | Produits d'exemple |
-| `npm run db:import-stripe` | Importe un catalogue Stripe existant (une fois) |
-| `npm run db:studio` | Explorer la base |
-| `npm run stripe:listen` | Relaie les webhooks Stripe vers `localhost:3000` |
+| `npm run db:up` / `db:down` | Start / stop local PostgreSQL |
+| `npm run db:migrate` / `db:deploy` | Migrations (development / production) |
+| `npm run db:seed` | Sample products |
+| `npm run db:import-stripe` | Import an existing Stripe catalog (one-off) |
+| `npm run db:studio` | Browse the database |
+| `npm run stripe:listen` | Forward Stripe webhooks to `localhost:3000` |
